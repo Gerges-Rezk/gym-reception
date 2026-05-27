@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gym Reception</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#ffffff;--bg2:#f8f9fa;--bg3:#f1f3f5;
+    --text:#111827;--text2:#6b7280;--text3:#9ca3af;
+    --border:#e5e7eb;--border2:#d1d5db;
+    --radius:8px;--radius-lg:12px;
+    --green-bg:#dcfce7;--green-text:#15803d;
+    --red-bg:#fee2e2;--red-text:#b91c1c;
+    --amber-bg:#fef9c3;--amber-text:#92400e;
+    --gray-bg:#f1f5f9;--gray-text:#475569;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;}
+  #wrap{max-width:1200px;margin:0 auto;padding:1.25rem;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+  .topbar-title{font-size:20px;font-weight:600;display:flex;align-items:center;gap:8px;}
+  .topbar-date{font-size:13px;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;}
+
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1rem;}
+  .stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;}
+  .stat-label{font-size:12px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
+  .stat-val{font-size:26px;font-weight:600;}
+  .stat-val.green{color:var(--green-text);}
+  .stat-val.red{color:var(--red-text);}
+  .stat-val.amber{color:var(--amber-text);}
+
+  .scanner-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem;}
+  .scanner-inner{display:flex;gap:1.25rem;align-items:flex-start;flex-wrap:wrap;}
+
+  .video-wrap{position:relative;width:280px;min-width:220px;border-radius:var(--radius);overflow:hidden;background:#000;aspect-ratio:1/1;flex-shrink:0;}
+  video{width:100%;height:100%;object-fit:cover;display:block;}
+  canvas#overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+
+  .corner{position:absolute;width:28px;height:28px;border-color:#22c55e;border-style:solid;z-index:2;}
+  .tl{top:12px;left:12px;border-width:3px 0 0 3px;}
+  .tr{top:12px;right:12px;border-width:3px 3px 0 0;}
+  .bl{bottom:12px;left:12px;border-width:0 0 3px 3px;}
+  .br{bottom:12px;right:12px;border-width:0 3px 3px 0;}
+
+  .scan-indicator{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:4px 10px;border-radius:20px;z-index:3;white-space:nowrap;}
+  .scan-indicator.found{background:rgba(34,197,94,.85);}
+  .scan-indicator.error{background:rgba(239,68,68,.85);}
+
+  .scan-right{flex:1;min-width:200px;display:flex;flex-direction:column;gap:12px;}
+  #cam-status{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px;}
+  .cam-btn{padding:9px 16px;background:#111827;color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;width:fit-content;}
+  .cam-btn:hover{background:#374151;}
+  .manual-row{display:flex;gap:8px;}
+  .manual-row input{flex:1;font-size:14px;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);outline:none;background:var(--bg);}
+  .manual-row input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12);}
+  .manual-row button{padding:9px 18px;background:#111827;color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;}
+  .manual-row button:hover{background:#374151;}
+
+  .last-scan{border-radius:var(--radius);padding:12px 14px;display:none;}
+  .last-scan-name{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .last-scan-meta{font-size:12px;color:var(--text2);margin-top:4px;}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;}
+  .b-active{background:var(--green-bg);color:var(--green-text);}
+  .b-expired{background:var(--red-bg);color:var(--red-text);}
+  .b-warning{background:var(--amber-bg);color:var(--amber-text);}
+  .b-notfound{background:var(--gray-bg);color:var(--gray-text);}
+
+  .table-wrap{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+  .table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+  .table-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .clear-btn{font-size:13px;color:var(--text2);background:none;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;padding:6px 12px;display:flex;align-items:center;gap:4px;}
+  .clear-btn:hover{background:var(--bg2);color:var(--red-text);border-color:#fca5a5;}
+  .tbl-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+  thead tr{background:var(--bg2);}
+  th{padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--border);}
+  td{padding:10px 12px;border-top:1px solid var(--border);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  tbody tr:hover td{background:var(--bg2);}
+  .empty-row td{text-align:center;color:var(--text3);padding:3rem;font-size:14px;}
+  .row-new td{animation:rowpulse .6s ease;}
+  @keyframes rowpulse{0%{background:#eff6ff}100%{background:transparent}}
+
+  @media(max-width:600px){
+    .stats-row{grid-template-columns:repeat(2,1fr);}
+    .video-wrap{width:100%;max-width:100%;}
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+
+  <div class="topbar">
+    <div class="topbar-title"><i class="ti ti-shield-check"></i> Gym Reception</div>
+    <div class="topbar-date" id="live-clock"></div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="stat-label">Total entries</div><div class="stat-val" id="s-total">0</div></div>
+    <div class="stat"><div class="stat-label">Active</div><div class="stat-val green" id="s-active">0</div></div>
+    <div class="stat"><div class="stat-label">Expired</div><div class="stat-val red" id="s-expired">0</div></div>
+    <div class="stat"><div class="stat-label">Expiring soon</div><div class="stat-val amber" id="s-warning">0</div></div>
+  </div>
+
+  <div class="scanner-card">
+    <div class="scanner-inner">
+      <div class="video-wrap">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div class="corner tl"></div><div class="corner tr"></div>
+        <div class="corner bl"></div><div class="corner br"></div>
+        <div class="scan-indicator" id="scan-indicator">Waiting for QR...</div>
+      </div>
+      <div class="scan-right">
+        <div id="cam-status"><i class="ti ti-camera-off"></i> Camera not started</div>
+        <button class="cam-btn" id="start-cam-btn"><i class="ti ti-camera"></i> Start camera</button>
+        <div class="manual-row">
+          <input id="mid" placeholder="Or type Member ID manually..." />
+          <button id="go-btn"><i class="ti ti-search"></i> Look up</button>
+        </div>
+        <div class="last-scan" id="last-scan">
+          <div class="last-scan-name" id="ls-name"></div>
+          <div class="last-scan-meta" id="ls-meta"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <div class="table-title"><i class="ti ti-table"></i> Today's entries</div>
+      <button class="clear-btn" id="clear-btn"><i class="ti ti-trash"></i> Clear log</button>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:48px">#</th>
+            <th style="width:75px">Time</th>
+            <th style="width:130px">Name</th>
+            <th style="width:80px">ID</th>
+            <th style="width:110px">Phone</th>
+            <th style="width:120px">Training type</th>
+            <th style="width:90px">Duration</th>
+            <th style="width:95px">Start date</th>
+            <th style="width:95px">End date</th>
+            <th style="width:80px">Days left</th>
+            <th style="width:110px">Status</th>
+            <th style="width:140px">Notes</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr class="empty-row"><td colspan="12">No entries yet — scan a member QR to begin</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+const API = "https://script.google.com/macros/s/AKfycbwGJJwpbsXp5xodqxqydaSKiZc97MPYMqdBPbybY7jIpvXSaYXMIHQAByW-8CyGat-Z/exec";
+
+const video = document.getElementById("video");
+const overlay = document.getElementById("overlay");
+const ctx = overlay.getContext("2d");
+const tbody = document.getElementById("tbody");
+const indicator = document.getElementById("scan-indicator");
+let entries = [];
+let lastId = "", lastTime = 0;
+let scanning = false;
+let animFrame = null;
+
+// Clock
+function tick() {
+  const now = new Date();
+  document.getElementById("live-clock").textContent =
+    now.toLocaleDateString("en-GB", { weekday:"short", day:"2-digit", month:"short", year:"numeric" }) +
+    "  ·  " + now.toLocaleTimeString("en-GB");
+  setTimeout(tick, 1000);
+}
+tick();
+
+// Start camera on button tap (required for Android Chrome)
+document.getElementById("start-cam-btn").addEventListener("click", startCam);
+
+async function startCam() {
+  const btn = document.getElementById("start-cam-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Starting...';
+  setCamStatus("loading", "Requesting camera...");
+
+  try {
+    // Stop any existing stream
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach(t => t.stop());
+    }
+
+    // Request back camera with high resolution for better QR reading
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        focusMode: { ideal: "continuous" }
+      }
+    });
+
+    video.srcObject = stream;
+    await video.play();
+
+    scanning = true;
+    btn.innerHTML = '<i class="ti ti-camera-rotate"></i> Restart camera';
+    btn.disabled = false;
+    setCamStatus("ok", "Camera ready — hold QR code steady in the frame");
+    indicator.textContent = "Scanning...";
+    scanLoop();
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-camera"></i> Try again';
+    let msg = "Camera unavailable";
+    if (e.name === "NotAllowedError") msg = "Permission denied — allow camera in browser settings";
+    else if (e.name === "NotFoundError") msg = "No camera found on this device";
+    else if (e.name === "NotReadableError") msg = "Camera in use by another app";
+    setCamStatus("error", msg);
+  }
+}
+
+function setCamStatus(type, msg) {
+  const el = document.getElementById("cam-status");
+  const icons = { ok: "ti-circle-check", error: "ti-alert-triangle", loading: "ti-loader" };
+  const colors = { ok: "#22c55e", error: "#ef4444", loading: "#6b7280" };
+  el.innerHTML = `<i class="ti ${icons[type]||'ti-camera'}" style="color:${colors[type]||'#6b7280'}"></i> ${msg}`;
+}
+
+function scanLoop() {
+  if (!scanning) return;
+  if (animFrame) cancelAnimationFrame(animFrame);
+
+  function frame() {
+    if (!scanning) return;
+
+    if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+      // Match overlay to video
+      overlay.width = video.videoWidth;
+      overlay.height = video.videoHeight;
+
+      // Draw video frame onto hidden canvas for processing
+      const offscreen = document.createElement("canvas");
+      offscreen.width = video.videoWidth;
+      offscreen.height = video.videoHeight;
+      const offCtx = offscreen.getContext("2d");
+      offCtx.drawImage(video, 0, 0);
+
+      // Try normal scan
+      let imageData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
+      let code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert"
+      });
+
+      // If failed, try inverted
+      if (!code) {
+        code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "onlyInvert"
+        });
+      }
+
+      // If still failed, try with contrast boost
+      if (!code) {
+        offCtx.filter = "contrast(1.8) brightness(1.1)";
+        offCtx.drawImage(video, 0, 0);
+        imageData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
+        code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "attemptBoth"
+        });
+      }
+
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+      if (code) {
+        // Draw green box around detected QR
+        const loc = code.location;
+        ctx.beginPath();
+        ctx.moveTo(loc.topLeftCorner.x, loc.topLeftCorner.y);
+        ctx.lineTo(loc.topRightCorner.x, loc.topRightCorner.y);
+        ctx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+        ctx.lineTo(loc.bottomLeftCorner.x, loc.bottomLeftCorner.y);
+        ctx.closePath();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "#22c55e";
+        ctx.stroke();
+
+        const now = Date.now();
+        if (code.data !== lastId || now - lastTime > 6000) {
+          lastId = code.data;
+          lastTime = now;
+          indicator.textContent = "QR detected!";
+          indicator.className = "scan-indicator found";
+          lookup(code.data.trim());
+        }
+      } else {
+        indicator.textContent = "Scanning...";
+        indicator.className = "scan-indicator";
+      }
+    }
+
+    animFrame = requestAnimationFrame(frame);
+  }
+
+  animFrame = requestAnimationFrame(frame);
+}
+
+async function lookup(id) {
+  setCamStatus("loading", "Looking up member " + id + "...");
+  try {
+    const res = await fetch(API + "?id=" + encodeURIComponent(id));
+    const data = await res.json();
+    if (data.found) {
+      addEntry(data.member);
+    } else {
+      setCamStatus("error", 'Not found: "' + id + '" — check Member ID in sheet');
+      showLast(null, id);
+      indicator.textContent = "Scanning...";
+      indicator.className = "scan-indicator";
+    }
+  } catch(e) {
+    setCamStatus("error", "Connection error — check internet");
+    indicator.textContent = "Scanning...";
+    indicator.className = "scan-indicator";
+  }
+}
+
+function getStatus(m) {
+  const s = (m["Status"] || "").toString().toUpperCase();
+  const d = parseInt(m["Days Left"]) || 0;
+  if (s === "EXPIRED" || d <= 0) return { label:"EXPIRED", cls:"b-expired", bg:"var(--red-bg)" };
+  if (d <= 7) return { label:"EXPIRING SOON", cls:"b-warning", bg:"var(--amber-bg)" };
+  return { label:"ACTIVE", cls:"b-active", bg:"var(--green-bg)" };
+}
+
+function addEntry(m) {
+  const now = new Date();
+  const time = now.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+  const st = getStatus(m);
+  entries.unshift({ time, m, st });
+  updateStats();
+  renderTable();
+  showLast(m, null, st, time);
+  setCamStatus("ok", "Scanned — ready for next member");
+  indicator.textContent = "Scanning...";
+  indicator.className = "scan-indicator";
+}
+
+function showLast(m, notFound, st, time) {
+  const el = document.getElementById("last-scan");
+  const nm = document.getElementById("ls-name");
+  const meta = document.getElementById("ls-meta");
+  el.style.display = "block";
+  if (m) {
+    nm.innerHTML = (m["Name"] || "Unknown") + ' <span class="badge ' + st.cls + '">' + st.label + '</span>';
+    meta.textContent = "ID: " + (m["ID"] || "") + "  ·  " + time + "  ·  Days left: " + (m["Days Left"] || "—");
+    el.style.background = st.bg;
+  } else {
+    nm.innerHTML = 'Member not found <span class="badge b-notfound">Unknown</span>';
+    meta.textContent = 'ID "' + notFound + '" does not exist in the sheet';
+    el.style.background = "var(--gray-bg)";
+  }
+}
+
+function updateStats() {
+  document.getElementById("s-total").textContent = entries.length;
+  document.getElementById("s-active").textContent = entries.filter(e => e.st.label === "ACTIVE").length;
+  document.getElementById("s-expired").textContent = entries.filter(e => e.st.label === "EXPIRED").length;
+  document.getElementById("s-warning").textContent = entries.filter(e => e.st.label === "EXPIRING SOON").length;
+}
+
+function renderTable() {
+  if (!entries.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="12">No entries yet — scan a member QR to begin</td></tr>';
+    return;
+  }
+  tbody.innerHTML = entries.map((e, i) => {
+    const m = e.m;
+    return `<tr class="${i === 0 ? "row-new" : ""}">
+      <td>${entries.length - i}</td>
+      <td>${e.time}</td>
+      <td title="${m["Name"]||""}">${m["Name"] || "—"}</td>
+      <td>${m["ID"] || "—"}</td>
+      <td>${m["Phone"] || "—"}</td>
+      <td title="${m["Training Type"]||""}">${m["Training Type"] || "—"}</td>
+      <td>${m["Duration (Months)"] || "—"}</td>
+      <td>${m["Start Date"] || "—"}</td>
+      <td>${m["End Date"] || "—"}</td>
+      <td>${m["Days Left"] || "—"}</td>
+      <td><span class="badge ${e.st.cls}">${e.st.label}</span></td>
+      <td title="${m["Notes"]||""}">${m["Notes"] || "—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+document.getElementById("go-btn").addEventListener("click", () => {
+  const v = document.getElementById("mid").value.trim();
+  if (v) { lookup(v); document.getElementById("mid").value = ""; }
+});
+document.getElementById("mid").addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    const v = e.target.value.trim();
+    if (v) { lookup(v); e.target.value = ""; }
+  }
+});
+document.getElementById("clear-btn").addEventListener("click", () => {
+  if (confirm("Clear all today's entries?")) {
+    entries = []; updateStats(); renderTable();
+    document.getElementById("last-scan").style.display = "none";
+  }
+});
+</script>
+</body>
+</html>
